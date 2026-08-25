@@ -1,0 +1,3796 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0,
+               user-scalable=no, maximum-scale=1.0">
+<title>NIGHTFALL — Vampiros vs Caçadores</title>
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    user-select:none;
+    -webkit-user-select:none;
+}
+html,body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    overscroll-behavior:none;
+    background:#08080d;
+    font-family:'Segoe UI',system-ui,sans-serif;
+    color:#eee;
+}
+canvas{
+    display:block;
+    background:#101018;
+    touch-action:none;
+}
+#game{
+    position:absolute;
+    top:0;
+    left:50%;
+    width:min(100vw,calc(100vh - 34px));
+    height:min(100vw,calc(100vh - 34px));
+    transform:translateX(-50%);
+}
+button,input{
+    font:inherit;
+}
+#ui-layer{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+}
+#ui-layer>*{
+    pointer-events:auto;
+}
+/* =========================================================
+   MENU
+========================================================= */
+#menu{
+    position:absolute;
+    inset:0;
+    z-index:1000;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    background:
+        radial-gradient(circle at 50% 35%,#3a101d 0%,transparent 38%),
+        linear-gradient(180deg,#080810,#180910);
+    padding:12px 12px 40px;
+    text-align:center;
+    overflow:hidden;
+}
+#menu h1{
+    font-size:clamp(2.5rem,9vw,4.5rem);
+    letter-spacing:7px;
+    color:#c41e3a;
+    text-shadow:
+        0 0 10px #c41e3a,
+        0 0 30px #c41e3a66;
+    margin-bottom:4px;
+}
+.subtitle{
+    color:#888;
+    font-size:1rem;
+    margin-bottom:35px;
+}
+.menu-btn{
+    min-width:270px;
+    margin:8px;
+    padding:14px 28px;
+    border-radius:8px;
+    border:2px solid #c41e3a;
+    background:#171721;
+    color:#eee;
+    cursor:pointer;
+    transition:.18s;
+}
+.menu-btn:hover,
+.menu-btn:active{
+    background:#c41e3a;
+    transform:scale(1.03);
+}
+.seed-box{
+    margin-top:20px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    flex-wrap:wrap;
+}
+.seed-box input{
+    width:160px;
+    padding:10px;
+    text-align:center;
+    border-radius:6px;
+    border:1px solid #444;
+    background:#0d0d12;
+    color:#fff;
+}
+.class-select{
+    display:none;
+    margin-top:10px;
+}
+.class-select h2{
+    color:#c41e3a;
+    margin-bottom:10px;
+}
+.class-card{
+    width:min(350px,90vw);
+    margin:10px;
+    padding:16px;
+    border:2px solid #333;
+    border-radius:10px;
+    background:#15151e;
+    cursor:pointer;
+    transition:.2s;
+}
+.class-card:hover{
+    border-color:#c41e3a;
+}
+.class-card.selected{
+    border-color:#c41e3a;
+    background:#2a121b;
+    box-shadow:0 0 20px #c41e3a22;
+}
+.class-card h3{
+    margin-bottom:8px;
+    color:#c41e3a;
+}
+.class-card p{
+    color:#aaa;
+    font-size:.88rem;
+    line-height:1.5;
+}
+#copyright{
+    position:fixed;
+    right:0;
+    bottom:8px;
+    left:0;
+    z-index:1200;
+    padding:0 8px;
+    color:#c41e3a;
+    font-size:clamp(.55rem,2.4vw,.8rem);
+    line-height:1.2;
+    font-weight:bold;
+    text-align:center;
+    pointer-events:none;
+    user-select:none;
+    -webkit-user-select:none;
+}
+/* =========================================================
+    INTERFACE
+========================================================= */
+#mode-badge{
+    position:absolute;
+    top:12px;
+    left:12px;
+    padding:7px 14px;
+    border-radius:20px;
+    background:#c41e3a;
+    color:#fff;
+    font-size:.78rem;
+    font-weight:bold;
+    z-index:50;
+}
+#pop-bar-container{
+    position:absolute;
+    top:12px;
+    left:50%;
+    transform:translateX(-50%);
+    width:min(520px,72vw);
+    text-align:center;
+    z-index:50;
+}
+#pop-bar-bg{
+    position:relative;
+    height:22px;
+    overflow:hidden;
+    border:2px solid #333;
+    border-radius:12px;
+    background:#111;
+}
+#pop-bar-human{
+    height:100%;
+    float:left;
+    background:linear-gradient(90deg,#1676d2,#3ca4ff);
+    transition:width:.35s;
+}
+#pop-bar-vamp{
+    height:100%;
+    float:right;
+    background:linear-gradient(90deg,#c41e3a,#ed3457);
+    transition:width:.35s;
+}
+#pop-bar-center{
+    position:absolute;
+    left:50%;
+    top:0;
+    bottom:0;
+    width:2px;
+    background:#ffffff55;
+}
+#pop-text{
+    margin-top:4px;
+    font-size:.82rem;
+    color:#ddd;
+}
+#pop-detail{
+    margin-top:2px;
+    font-size:.72rem;
+    color:#888;
+}
+/* =========================================================
+   MINIMAPA
+========================================================= */
+#minimap{
+    position:absolute;
+    top:12px;
+    right:12px;
+    width:150px;
+    height:150px;
+    border:2px solid #333;
+    border-radius:8px;
+    background:#08080e;
+    z-index:50;
+}
+/* =========================================================
+   INFO
+========================================================= */
+#info-panel{
+    position:absolute;
+    left:12px;
+    bottom:12px;
+    min-width:190px;
+    padding:10px 14px;
+    border:1px solid #333;
+    border-radius:8px;
+    background:#08080dcc;
+    font-size:.8rem;
+    z-index:50;
+}
+#hp-info{
+    margin-bottom:4px;
+}
+/* =========================================================
+   PAUSE
+========================================================= */
+#pause-screen{
+    position:absolute;
+    inset:0;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    background:#000b;
+    z-index:900;
+    text-align:center;
+}
+#pause-screen h2{
+    font-size:3rem;
+    color:#ddd;
+    letter-spacing:5px;
+}
+#pause-screen p{
+    color:#888;
+    margin-top:10px;
+}
+/* =========================================================
+    CONTROLES MOVEIS
+========================================================= */
+#mobile-controls{
+    display:none;
+    position:absolute;
+    inset:0;
+    z-index:100;
+    pointer-events:none;
+}
+#joystick-zone{
+    position:absolute;
+    left:25px;
+    bottom:25px;
+    width:145px;
+    height:145px;
+    pointer-events:auto;
+}
+#joystick-base{
+    width:145px;
+    height:145px;
+    border-radius:50%;
+    background:#ffffff12;
+    border:2px solid #ffffff2b;
+    position:relative;
+}
+#joystick-knob{
+    position:absolute;
+    left:42px;
+    top:42px;
+    width:61px;
+    height:61px;
+    border-radius:50%;
+    background:#ffffff55;
+    pointer-events:none;
+}
+.mobile-btn{
+    position:absolute;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+    pointer-events:auto;
+    color:white;
+    font-size:1.5rem;
+}
+#mobile-left{
+    right:35px;
+    bottom:35px;
+    width:88px;
+    height:88px;
+    background:#c41e3a88;
+    border:3px solid #c41e3a;
+}
+#mobile-right{
+    right:140px;
+    bottom:75px;
+    width:65px;
+    height:65px;
+    background:#4a008088;
+    border:2px solid #8a2be2;
+}
+/* =========================================================
+    FIM DE JOGO
+========================================================= */
+#game-over,
+#victory{
+    position:absolute;
+    inset:0;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    background:#000c;
+    z-index:800;
+    text-align:center;
+}
+#game-over h2,
+#victory h2{
+    font-size:3rem;
+    margin-bottom:15px;
+}
+#game-over h2{
+    color:#c41e3a;
+}
+#victory h2{
+    color:#3ca4ff;
+}
+/* =========================================================
+   PENUMBRA
+========================================================= */
+#penumbra{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    z-index:10;
+    background:
+        radial-gradient(
+            circle at center,
+            transparent 25%,
+            #00000025 55%,
+            #00000068 82%,
+            #000000a0 100%
+        );
+}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui-layer">
+<!-- ======================================================
+     MENU
+====================================================== -->
+<div id="menu">
+    <h1>NIGHTFALL</h1>
+    <div class="subtitle">
+        Vampiros vs Caçadores
+    </div>
+    <button class="menu-btn" id="btn-vampire">
+        🧛 MODO VAMPIRO
+    </button>
+    <button class="menu-btn" id="btn-hunter">
+        🔫 MODO CAÇADOR
+    </button>
+    <div class="seed-box">
+        <label>SEED:</label>
+        <input
+            id="seed-input"
+            type="text"
+            maxlength="12"
+            value="48372915"
+        >
+        <button
+            class="menu-btn"
+            id="btn-random-seed"
+            style="min-width:auto;padding:10px 16px"
+        >
+            🎲
+        </button>
+    </div>
+    <div class="class-select" id="class-select">
+        <h2>Escolha seu Vampiro</h2>
+        <div class="class-card" data-class="common">
+            <h3>🧛 Vampiro Comum</h3>
+            <p>
+                Teleporte Sombrio.<br>
+                Grande mobilidade.<br>
+                Deve se aproximar para infectar.<br>
+                Vampiros comuns fogem de caçadores de frente.
+            </p>
+        </div>
+        <div class="class-card" data-class="infected">
+            <h3>🩸 Caçador Infectado</h3>
+            <p>
+                Mantém a arma do caçador.<br>
+                Munição infinita.<br>
+                Pode infectar ou atirar.<br>
+                IA: 75% infectar / 25% atirar.
+            </p>
+        </div>
+        <button
+            class="menu-btn"
+            id="btn-start-vamp"
+        >
+            COMEÇAR
+        </button>
+    </div>
+    <div class="class-select" id="class-select-hunter">
+        <h2>Escolha sua Classe</h2>
+        <div class="class-card" data-class="hunter">
+            <h3>🔫 Caçador</h3>
+            <p>
+                Arma com munição infinita.<br>
+                Elimina vampiros com tiros.<br>
+                Combate à distância.
+            </p>
+        </div>
+        <div class="class-card" data-class="cleric">
+            <h3>✝️ Clérigo</h3>
+            <p>
+                Visual branco e dourado.<br>
+                Não atira — purifica vampiros.<br>
+                Cura à média distância (mouse).<br>
+                Vampiro purificado volta a ser humano.
+            </p>
+        </div>
+        <button
+            class="menu-btn"
+            id="btn-start-hunter"
+        >
+            COMEÇAR
+        </button>
+    </div>
+</div>
+<!-- ======================================================
+    INTERFACE
+====================================================== -->
+<div id="mode-badge"></div>
+<div id="pop-bar-container">
+    <div id="pop-bar-bg">
+        <div
+            id="pop-bar-human"
+            style="width:50%"
+        ></div>
+        <div
+            id="pop-bar-vamp"
+            style="width:50%"
+        ></div>
+        <div id="pop-bar-center"></div>
+    </div>
+    <div id="pop-text">
+        50% Humanos | 50% Vampiros
+    </div>
+    <div id="pop-detail">
+        0 vivos
+    </div>
+</div>
+<canvas
+    id="minimap"
+    width="150"
+    height="150"
+></canvas>
+<div id="info-panel">
+    <div id="hp-info"></div>
+    <div id="ability-info"></div>
+</div>
+<!-- ======================================================
+    CONTROLES MOVEIS
+====================================================== -->
+<div id="mobile-controls">
+    <div id="joystick-zone">
+        <div id="joystick-base">
+            <div id="joystick-knob"></div>
+        </div>
+    </div>
+    <div
+        class="mobile-btn"
+        id="mobile-left"
+    >
+        🔥
+    </div>
+    <div
+        class="mobile-btn"
+        id="mobile-right"
+    >
+        🩸
+    </div>
+</div>
+<div id="penumbra"></div>
+<!-- ======================================================
+    PAUSA
+====================================================== -->
+<div id="pause-screen">
+    <h2>PAUSADO</h2>
+    <p>
+        P para continuar<br>
+        ESC para continuar
+    </p>
+</div>
+<!-- ======================================================
+    VITORIA / DERROTA
+====================================================== -->
+<div id="game-over">
+    <h2>DERROTA</h2>
+    <p id="defeat-msg">
+        Você foi eliminado.
+    </p>
+    <button
+        class="menu-btn"
+        id="btn-defeat-menu"
+    >
+        MENU PRINCIPAL
+    </button>
+</div>
+<div id="victory">
+    <h2>VITÓRIA</h2>
+    <p id="victory-msg"></p>
+    <button
+        class="menu-btn"
+        id="btn-victory-menu"
+    >
+        NOVO JOGO
+    </button>
+</div>
+</div>
+<footer id="copyright">© 2026 André Luiz Silva Dias Borges. Todos os direitos reservados.</footer>
+<script>
+/* =========================================================
+   NIGHTFALL
+========================================================= */
+/* ---------------------------------------------------------
+   CONFIGURAÇÃO
+--------------------------------------------------------- */
+const TILE = 32;
+const WORLD_W = 120;
+const WORLD_H = 120;
+const MAX_Z = 1; // Térreo (0) + 1º andar (1) apenas
+const POPULATION_HUMANS = 65;
+const HUNTERS_ALLY = 4;
+const STARTING_VAMPIRES = 5;
+const CLERIC_COUNT = 3;
+const INFECT_RANGE = 30;
+const FIRE_COOLDOWN = .32;
+const BULLET_SPEED = 520;
+const BULLET_LIFE = 1.5;
+const TELEPORT_COOLDOWN = 4.5;
+const TELEPORT_RANGE = 450;
+const VISION_RANGE = 420;
+const FOV = Math.PI * .75;
+const CURE_RANGE = 200;
+const CURE_COOLDOWN = 2.0;
+/* ---------------------------------------------------------
+   CANVAS
+--------------------------------------------------------- */
+const canvas =
+    document.getElementById("game");
+const ctx =
+    canvas.getContext("2d");
+const minimap =
+    document.getElementById("minimap");
+const minimapCtx =
+    minimap.getContext("2d");
+/* ---------------------------------------------------------
+   ESTADO
+--------------------------------------------------------- */
+let gameState = "menu";
+let mode = null;
+let playerClass = null;
+let seed = 48372915;
+let rng;
+let world = [];
+let entities = [];
+let bullets = [];
+let particles = [];
+let player = null;
+let camera = {
+    x:0,
+    y:0
+};
+let keys = {};
+let mouse = {
+    x:0,
+    y:0,
+    left:false,
+    right:false
+};
+let touchJoy = {
+    active:false,
+    dx:0,
+    dy:0
+};
+let mobileLeft = false;
+let mobileRight = false;
+let lastTime = 0;
+let gameTime = 0;
+let lastSave = 0;
+/* =========================================================
+   RNG
+========================================================= */
+class RNG{
+    constructor(seed){
+        this.s = seed >>> 0;
+    }
+    next(){
+        this.s =
+            (this.s * 1664525 + 1013904223)
+            >>> 0;
+        return this.s / 4294967296;
+    }
+    int(min,max){
+        return min +
+            Math.floor(
+                this.next() *
+                (max-min+1)
+            );
+    }
+    chance(p){
+        return this.next() < p;
+    }
+    pick(arr){
+        return arr[
+            this.int(0,arr.length-1)
+        ];
+    }
+}
+/* =========================================================
+   TILES
+========================================================= */
+const T = {
+    EMPTY:0,
+    GRASS:1,
+    ROAD:2,
+    FLOOR:3,
+    WALL:4,
+    DOOR:5,
+    STAIR_UP:6,
+    STAIR_DOWN:7,
+    WINDOW:8
+};
+/* =========================================================
+   WORLD
+========================================================= */
+function generateWorld(seedValue){
+    rng = new RNG(seedValue);
+    world = [];
+    for(let z=0; z<=MAX_Z; z++){
+        world[z] =
+            Array.from(
+                {length:WORLD_H},
+                ()=>Array(WORLD_W).fill(T.GRASS)
+            );
+    }
+    /* BASE */
+    for(let y=0;y<WORLD_H;y++){
+        for(let x=0;x<WORLD_W;x++){
+            world[0][y][x] =
+                T.GRASS;
+        }
+    }
+    /* RUAS PRINCIPAIS */
+    const roads = [8,20,32,44,56,68,80,92,104,116];
+    for(const r of roads){
+        for(let i=0;i<WORLD_W;i++){
+            for(let d=-1;d<=1;d++){
+                if(
+                    r+d>=0 &&
+                    r+d<WORLD_H
+                ){
+                    world[0][r+d][i] =
+                        T.ROAD;
+                }
+                if(
+                    r+d>=0 &&
+                    r+d<WORLD_W
+                ){
+                    world[0][i][r+d] =
+                        T.ROAD;
+                }
+            }
+        }
+    }
+    /* PRÉDIOS */
+    for(let by=2;by<WORLD_H-10;by+=12){
+        for(let bx=2;bx<WORLD_W-10;bx+=12){
+            if(rng.chance(.82)){
+                const w =
+                    rng.int(6,10);
+                const h =
+                    rng.int(6,10);
+                // 0 = só térreo | 1 = térreo + 1º andar
+                const floors =
+                    rng.chance(.55)
+                    ? 1
+                    : 0;
+                placeBuilding(
+                    bx+1,
+                    by+1,
+                    w,
+                    h,
+                    floors
+                );
+            }
+        }
+    }
+    /* BORDA */
+    for(let i=0;i<WORLD_W;i++){
+        world[0][0][i]=T.WALL;
+        world[0][WORLD_H-1][i]=T.WALL;
+        world[0][i][0]=T.WALL;
+        world[0][i][WORLD_W-1]=T.WALL;
+    }
+}
+/* ---------------------------------------------------------
+   CONSTRUÇÕES
+--------------------------------------------------------- */
+function placeBuilding(
+    sx,
+    sy,
+    w,
+    h,
+    floors
+){
+    if(
+        sx<1 ||
+        sy<1 ||
+        sx+w>=WORLD_W-1 ||
+        sy+h>=WORLD_H-1
+    ){
+        return;
+    }
+    for(let z=0;z<=floors;z++){
+        for(
+            let y=sy;
+            y<sy+h;
+            y++
+        ){
+            for(
+                let x=sx;
+                x<sx+w;
+                x++
+            ){
+                if(
+                    y===sy ||
+                    y===sy+h-1 ||
+                    x===sx ||
+                    x===sx+w-1
+                ){
+                    world[z][y][x]=T.WALL;
+                }else{
+                    world[z][y][x]=T.FLOOR;
+                }
+            }
+        }
+        /* JANELAS */
+        if(w>=7){
+            world[z][sy][sx+2]=T.WINDOW;
+            world[z][sy][sx+w-3]=T.WINDOW;
+        }
+    }
+    /* PORTA */
+    const side =
+        rng.int(0,3);
+    let doorX=sx;
+    let doorY=sy;
+    if(side===0){
+        doorX=sx+Math.floor(w/2);
+        doorY=sy;
+    }else if(side===1){
+        doorX=sx+Math.floor(w/2);
+        doorY=sy+h-1;
+    }else if(side===2){
+        doorX=sx;
+        doorY=sy+Math.floor(h/2);
+    }else{
+        doorX=sx+w-1;
+        doorY=sy+Math.floor(h/2);
+    }
+    world[0][doorY][doorX]=T.DOOR;
+    /* ESCADAS */
+    for(let z=1;z<=floors;z++){
+        const stairX =
+            sx+2;
+        const stairY =
+            sy+2;
+        world[z-1][stairY][stairX]
+            =T.STAIR_UP;
+        world[z][stairY][stairX]
+            =T.STAIR_DOWN;
+    }
+}
+/* =========================================================
+   UTILITÁRIOS DE MAPA
+========================================================= */
+function isSolid(tx,ty,z){
+    if(
+        tx<0 ||
+        ty<0 ||
+        tx>=WORLD_W ||
+        ty>=WORLD_H
+    ){
+        return true;
+    }
+    const tile =
+        world[z][ty][tx];
+    return (
+        tile===T.WALL ||
+        tile===T.EMPTY ||
+        tile===T.WINDOW
+    );
+}
+function canMove(e,nx,ny){
+    const r =
+        e.radius*.7;
+    const points=[
+        [nx-r,ny-r],
+        [nx+r,ny-r],
+        [nx-r,ny+r],
+        [nx+r,ny+r]
+    ];
+    for(const p of points){
+        const tx =
+            Math.floor(p[0]/TILE);
+        const ty =
+            Math.floor(p[1]/TILE);
+        if(isSolid(tx,ty,e.z))
+            return false;
+    }
+    return true;
+}
+function tryMove(e,dx,dy,dt){
+    const len =
+        Math.hypot(dx,dy);
+    if(len===0)
+        return;
+    dx/=len;
+    dy/=len;
+    const amount =
+        e.speed*dt;
+    const mx =
+        dx*amount;
+    const my =
+        dy*amount;
+    if(
+        canMove(
+            e,
+            e.x+mx,
+            e.y
+        )
+    ){
+        e.x+=mx;
+    }
+    if(
+        canMove(
+            e,
+            e.x,
+            e.y+my
+        )
+    ){
+        e.y+=my;
+    }
+    checkStairs(e);
+}
+function checkStairs(e){
+    if(e.stairCooldown && e.stairCooldown>0)
+        return;
+    const tx =
+        Math.floor(e.x/TILE);
+    const ty =
+        Math.floor(e.y/TILE);
+    const tile =
+        world[e.z]?.[ty]?.[tx];
+    if(
+        tile===T.STAIR_UP &&
+        e.z<MAX_Z
+    ){
+        e.z++;
+        e.stairCooldown=0.55;
+        const nx=e.x+TILE*0.4;
+        if(canMove(e,nx,e.y)) e.x=nx;
+        else if(canMove(e,e.x-TILE*0.4,e.y)) e.x-=TILE*0.4;
+    }
+    else if(
+        tile===T.STAIR_DOWN &&
+        e.z>0
+    ){
+        e.z--;
+        e.stairCooldown=0.55;
+        const nx=e.x+TILE*0.4;
+        if(canMove(e,nx,e.y)) e.x=nx;
+        else if(canMove(e,e.x-TILE*0.4,e.y)) e.x-=TILE*0.4;
+    }
+}
+/* =========================================================
+    POSICAO INICIAL
+========================================================= */
+function findSpawnPos(){
+    for(let i=0;i<200;i++){
+        const tx =
+            rng.int(2,WORLD_W-3);
+        const ty =
+            rng.int(2,WORLD_H-3);
+        const tile =
+            world[0][ty][tx];
+        if(
+            tile===T.GRASS ||
+            tile===T.ROAD ||
+            tile===T.FLOOR ||
+            tile===T.DOOR
+        ){
+            return {
+                x:tx*TILE+TILE/2,
+                y:ty*TILE+TILE/2,
+                z:0
+            };
+        }
+    }
+    return {
+        x:WORLD_W*TILE/2,
+        y:WORLD_H*TILE/2,
+        z:0
+    };
+}
+/* =========================================================
+   ENTIDADES
+========================================================= */
+let nextId=1;
+function createEntity(
+    type,
+    x,
+    y,
+    z,
+    options={}
+){
+    const e={
+        id:nextId++,
+        type,
+        originalType:
+            options.originalType || type,
+        team:
+            options.team ||
+            (
+                type==="vampire" ||
+                type==="infected_hunter"
+                    ? "vampire"
+                    : "human"
+            ),
+        x,
+        y,
+        z,
+        vx:0,
+        vy:0,
+        dir:
+            rng.next()*Math.PI*2,
+        speed:
+            options.speed || 70,
+        radius:12,
+        alive:true,
+        health:1,
+        isPlayer:false,
+        infected:
+            options.infected || false,
+        fireCooldown:0,
+        teleportCooldown:0,
+        cureCooldown:0,
+        stairCooldown:0,
+        state:"wander",
+        target:null,
+        path:[],
+        pathIndex:0,
+        memoryTimer:0,
+        lastSeenEnemy:null,
+        color:"#fff"
+    };
+    updateVisual(e);
+    return e;
+}
+/* =========================================================
+   VISUAL DOS PERSONAGENS
+========================================================= */
+function updateVisual(e){
+    if(e.type==="human"){
+        e.color="#4da6ff";
+    }
+    else if(e.type==="cleric"){
+        e.color="#f2f0e6";
+    }
+    else if(e.type==="hunter"){
+        e.color="#17171d";
+    }
+    else if(e.type==="vampire"){
+        e.color="#c41e3a";
+    }
+    else if(e.type==="infected_hunter"){
+        e.color="#9e1731";
+    }
+}
+/* =========================================================
+    CRIACAO
+========================================================= */
+function spawnWorld(){
+    entities=[];
+    bullets=[];
+    particles=[];
+    nextId=1;
+    /* JOGADOR */
+    let pos=findSpawnPos();
+    if(mode==="vampire"){
+        if(playerClass==="common"){
+            player=createEntity(
+                "vampire",
+                pos.x,
+                pos.y,
+                pos.z,
+                {speed:115}
+            );
+        }else{
+            player=createEntity(
+                "infected_hunter",
+                pos.x,
+                pos.y,
+                pos.z,
+                {
+                    speed:100,
+                    infected:true,
+                    originalType:"hunter"
+                }
+            );
+        }
+    }else{
+        if(playerClass==="cleric"){
+            player=createEntity(
+                "cleric",
+                pos.x,
+                pos.y,
+                pos.z,
+                {speed:90}
+            );
+        }else{
+            player=createEntity(
+                "hunter",
+                pos.x,
+                pos.y,
+                pos.z,
+                {speed:100}
+            );
+        }
+    }
+    player.isPlayer=true;
+    entities.push(player);
+    /* HUMANOS */
+    for(
+        let i=0;
+        i<POPULATION_HUMANS;
+        i++
+    ){
+        const p=findSpawnPos();
+        if(p){
+            entities.push(
+                createEntity(
+                    "human",
+                    p.x,
+                    p.y,
+                    p.z,
+                    {
+                        speed:
+                            45+rng.int(0,25)
+                    }
+                )
+            );
+        }
+    }
+    /* CAÇADORES */
+    const hunters =
+        mode==="hunter"
+            ? HUNTERS_ALLY
+            : 3;
+    for(let i=0;i<hunters;i++){
+        const p=findSpawnPos();
+        if(p){
+            entities.push(
+                createEntity(
+                    "hunter",
+                    p.x,
+                    p.y,
+                    p.z,
+                    {
+                        speed:82
+                    }
+                )
+            );
+        }
+    }
+    /* CLÉRIGOS NPC */
+    for(let i=0;i<CLERIC_COUNT;i++){
+        const p=findSpawnPos();
+        if(p){
+            entities.push(
+                createEntity(
+                    "cleric",
+                    p.x,
+                    p.y,
+                    p.z,
+                    {speed:60}
+                )
+            );
+        }
+    }
+    /* VAMPIROS INICIAIS
+       SOMENTE NO MODO CAÇADOR */
+    if(mode==="hunter"){
+        for(
+            let i=0;
+            i<STARTING_VAMPIRES;
+            i++
+        ){
+            const p=findSpawnPos();
+            if(p){
+                entities.push(
+                    createEntity(
+                        "vampire",
+                        p.x,
+                        p.y,
+                        p.z,
+                        {
+                            speed:105
+                        }
+                    )
+                );
+            }
+        }
+    }
+}
+/* =========================================================
+   PATHFINDING
+========================================================= */
+function findPath(
+    ex,
+    ey,
+    ez,
+    tx,
+    ty,
+    tz
+){
+    if(ez!==tz)
+        return [];
+    const start={
+        x:Math.floor(ex/TILE),
+        y:Math.floor(ey/TILE)
+    };
+    const goal={
+        x:Math.floor(tx/TILE),
+        y:Math.floor(ty/TILE)
+    };
+    const queue=[
+        [start.x,start.y]
+    ];
+    const came=
+        new Map();
+    const key=(x,y)=>`${x},${y}`;
+    came.set(
+        key(start.x,start.y),
+        null
+    );
+    const dirs=[
+        [1,0],
+        [-1,0],
+        [0,1],
+        [0,-1]
+    ];
+    let found=false;
+    let iterations=0;
+    while(
+        queue.length &&
+        iterations<1200
+    ){
+        iterations++;
+        const current =
+            queue.shift();
+        const cx=current[0];
+        const cy=current[1];
+        if(
+            cx===goal.x &&
+            cy===goal.y
+        ){
+            found=true;
+            break;
+        }
+        for(const d of dirs){
+            const nx=cx+d[0];
+            const ny=cy+d[1];
+            if(
+                nx<0 ||
+                ny<0 ||
+                nx>=WORLD_W ||
+                ny>=WORLD_H
+            )
+                continue;
+            if(
+                isSolid(
+                    nx,
+                    ny,
+                    ez
+                )
+            )
+                continue;
+            const k=
+                key(nx,ny);
+            if(came.has(k))
+                continue;
+            came.set(
+                k,
+                [cx,cy]
+            );
+            queue.push([
+                nx,
+                ny
+            ]);
+        }
+    }
+    if(!found)
+        return [];
+    const path=[];
+    let cur=[
+        goal.x,
+        goal.y
+    ];
+    while(cur){
+        path.push({
+            x:
+                cur[0]*TILE+
+                TILE/2,
+            y:
+                cur[1]*TILE+
+                TILE/2
+        });
+        cur=
+            came.get(
+                key(cur[0],cur[1])
+            );
+    }
+    path.reverse();
+    return path.slice(1);
+}
+/* =========================================================
+   VISÃO
+========================================================= */
+function canSee(from,to){
+    if(from.z!==to.z)
+        return false;
+    const dx=
+        to.x-from.x;
+    const dy=
+        to.y-from.y;
+    const distance=
+        Math.hypot(dx,dy);
+    if(distance>VISION_RANGE)
+        return false;
+    const angle=
+        Math.atan2(dy,dx);
+    let diff=
+        angle-from.dir;
+    while(diff>Math.PI)
+        diff-=Math.PI*2;
+    while(diff<-Math.PI)
+        diff+=Math.PI*2;
+    if(
+        Math.abs(diff)>
+        FOV/2
+    )
+        return false;
+    const steps=
+        Math.ceil(distance/12);
+    for(
+        let i=1;
+        i<steps;
+        i++
+    ){
+        const t=i/steps;
+        const rx=
+            from.x+dx*t;
+        const ry=
+            from.y+dy*t;
+        const tx=
+            Math.floor(rx/TILE);
+        const ty=
+            Math.floor(ry/TILE);
+        if(
+            isSolid(
+                tx,
+                ty,
+                from.z
+            )
+        )
+            return false;
+    }
+    return true;
+}
+/* =========================================================
+   ATAQUE PELAS COSTAS
+========================================================= */
+function isBehind(
+    attacker,
+    target
+){
+    const dx=
+        attacker.x-target.x;
+    const dy=
+        attacker.y-target.y;
+    const angle=
+        Math.atan2(dy,dx);
+    let diff=
+        angle-target.dir;
+    while(diff>Math.PI)
+        diff-=Math.PI*2;
+    while(diff<-Math.PI)
+        diff+=Math.PI*2;
+    return (
+        Math.abs(diff)>
+        Math.PI*.60
+    );
+}
+/* =========================================================
+   INFECÇÃO
+========================================================= */
+function infect(
+    attacker,
+    target
+){
+    if(!attacker.alive)
+        return false;
+    if(!target.alive)
+        return false;
+    if(target.team==="vampire")
+        return false;
+    if(attacker.z!==target.z)
+        return false;
+    const distance=
+        Math.hypot(
+            attacker.x-target.x,
+            attacker.y-target.y
+        );
+    if(
+        distance>
+        INFECT_RANGE
+    )
+        return false;
+    /* CAÇADOR SÓ PELAS COSTAS */
+    if(
+        target.type==="hunter" &&
+        !isBehind(attacker,target)
+    ){
+        return false;
+    }
+    target.team="vampire";
+    target.infected=true;
+    target.originalType=
+        target.type;
+    if(
+        target.type==="hunter"
+    ){
+        target.type=
+            "infected_hunter";
+    }else{
+        target.type=
+            "vampire";
+    }
+    target.state="hunt";
+    target.path=[];
+    updateVisual(target);
+    spawnInfectionFX(
+        target.x,
+        target.y,
+        target.z
+    );
+    if(target.isPlayer && mode==="hunter"){
+        target.isPlayer=false;
+        endGame(
+            false,
+            "Você foi infectado e agora pertence aos vampiros."
+        );
+    }
+    return true;
+}
+/* =========================================================
+   CURA / PURIFICAÇÃO (CLÉRIGO)
+========================================================= */
+function cureVampire(cleric, target){
+    if(!cleric || !cleric.alive) return false;
+    if(cleric.type!=="cleric") return false;
+    if(!target || !target.alive) return false;
+    if(target.team!=="vampire") return false;
+    if(cleric.z!==target.z) return false;
+    if(cleric.cureCooldown>0) return false;
+    const distance=Math.hypot(
+        cleric.x-target.x,
+        cleric.y-target.y
+    );
+    if(distance>CURE_RANGE) return false;
+    cleric.cureCooldown=CURE_COOLDOWN;
+    const original=target.originalType || "human";
+    if(original==="hunter" || target.type==="infected_hunter"){
+        target.type="hunter";
+        target.team="human";
+        target.infected=false;
+        target.originalType="hunter";
+    }else if(original==="cleric"){
+        target.type="cleric";
+        target.team="human";
+        target.infected=false;
+        target.originalType="cleric";
+    }else{
+        target.type="human";
+        target.team="human";
+        target.infected=false;
+        target.originalType="human";
+    }
+    target.state="wander";
+    target.path=[];
+    target.target=null;
+    updateVisual(target);
+    for(let i=0;i<16;i++){
+        particles.push({
+            x:target.x,
+            y:target.y,
+            z:target.z,
+            vx:(rng.next()-.5)*140,
+            vy:(rng.next()-.5)*140,
+            life:.35+rng.next()*.4,
+            color:rng.chance(.5)?"#f5f0d8":"#d4af37"
+        });
+    }
+    if(target.isPlayer && mode==="vampire"){
+        target.isPlayer=false;
+        endGame(
+            false,
+            "Você foi purificado por um clérigo."
+        );
+    }
+    return true;
+}
+function playerCure(){
+    if(!player || !player.alive) return;
+    if(player.type!=="cleric") return;
+    if(player.cureCooldown>0) return;
+    let target=null;
+    let best=CURE_RANGE;
+    for(let i=0;i<entities.length;i++){
+        const e=entities[i];
+        if(!e.alive) continue;
+        if(e.id===player.id) continue;
+        if(e.team!=="vampire") continue;
+        if(e.z!==player.z) continue;
+        const d=Math.hypot(e.x-player.x,e.y-player.y);
+        if(d<best){
+            best=d;
+            target=e;
+        }
+    }
+    if(target){
+        cureVampire(player,target);
+    }
+}
+/* =========================================================
+   TIRO
+========================================================= */
+function fireBullet(owner){
+    if(
+        !owner.alive ||
+        owner.fireCooldown>0
+    )
+        return;
+    owner.fireCooldown=
+        FIRE_COOLDOWN;
+    bullets.push({
+        x:owner.x,
+        y:owner.y,
+        z:owner.z,
+        vx:
+            Math.cos(owner.dir)*
+            BULLET_SPEED,
+        vy:
+            Math.sin(owner.dir)*
+            BULLET_SPEED,
+        life:BULLET_LIFE,
+        ownerId:owner.id,
+        team:owner.team
+    });
+    for(let i=0;i<5;i++){
+        particles.push({
+            x:owner.x,
+            y:owner.y,
+            z:owner.z,
+            vx:
+                Math.cos(owner.dir)*100+
+                (rng.next()-.5)*70,
+            vy:
+                Math.sin(owner.dir)*100+
+                (rng.next()-.5)*70,
+            life:.2+rng.next()*.15,
+            color:"#ffd85c"
+        });
+    }
+}
+/* =========================================================
+    PROJETEIS
+========================================================= */
+function updateBullets(dt){
+    for(
+        let i=bullets.length-1;
+        i>=0;
+        i--
+    ){
+        const b=bullets[i];
+        b.x+=b.vx*dt;
+        b.y+=b.vy*dt;
+        b.life-=dt;
+        if(b.life<=0){
+            bullets.splice(i,1);
+            continue;
+        }
+        const tx=
+            Math.floor(b.x/TILE);
+        const ty=
+            Math.floor(b.y/TILE);
+        if(
+            isSolid(
+                tx,
+                ty,
+                b.z
+            )
+        ){
+            bullets.splice(i,1);
+            continue;
+        }
+        for(const e of entities){
+            if(!e.alive)
+                continue;
+            if(e.id===b.ownerId)
+                continue;
+            if(e.z!==b.z)
+                continue;
+            if(
+                Math.hypot(
+                    e.x-b.x,
+                    e.y-b.y
+                )<
+                e.radius+5
+            ){
+                /*
+                 * IMPORTANTE:
+                 *
+                 * Apenas tiros de humanos
+                 * podem matar vampiros.
+                 *
+                 * Um caçador infectado também
+                 * possui equipe vampira.
+                 *
+                 * Portanto:
+                 *
+                 * cacador humano -> mata vampiro
+                 *
+                 * cacador infectado -> mata
+                 * humanos/caçadores
+                 */
+                if(b.team==="human"){
+                    if(e.team==="vampire"){
+                        killEntity(e);
+                    }
+                }else{
+                    /*
+                     * Tiro de vampiro infectado
+                     * pode matar humanos.
+                     */
+                    if(e.team==="human"){
+                        killEntity(e);
+                    }
+                }
+                bullets.splice(i,1);
+                break;
+            }
+        }
+    }
+}
+/* =========================================================
+   MORTE
+========================================================= */
+function killEntity(e){
+    if(!e.alive)
+        return;
+    e.alive=false;
+    e.health=0;
+    spawnDeathFX(e);
+}
+/* =========================================================
+   EFEITOS
+========================================================= */
+function spawnDeathFX(e){
+    for(let i=0;i<15;i++){
+        particles.push({
+            x:e.x,
+            y:e.y,
+            z:e.z,
+            vx:
+                (rng.next()-.5)*180,
+            vy:
+                (rng.next()-.5)*180,
+            life:
+                .4+rng.next()*.5,
+            color:e.color
+        });
+    }
+}
+function spawnInfectionFX(x,y,z){
+    for(let i=0;i<16;i++){
+        particles.push({
+            x,
+            y,
+            z,
+            vx:
+                (rng.next()-.5)*150,
+            vy:
+                (rng.next()-.5)*150,
+            life:
+                .35+rng.next()*.4,
+            color:
+                rng.chance(.5)
+                    ? "#c41e3a"
+                    : "#8a2be2"
+        });
+    }
+}
+function teleportFX(x,y,z){
+    for(let i=0;i<18;i++){
+        particles.push({
+            x,
+            y,
+            z,
+            vx:
+                (rng.next()-.5)*180,
+            vy:
+                (rng.next()-.5)*180,
+            life:.5,
+            color:"#8a2be2"
+        });
+    }
+}
+/* =========================================================
+   TELEPORTE
+========================================================= */
+function teleportPlayer(){
+    if(
+        !player ||
+        !player.alive ||
+        player.type!=="vampire"
+    )
+        return;
+    if(
+        player.teleportCooldown>0
+    )
+        return;
+    let target=null;
+    let bestDistance=
+        TELEPORT_RANGE;
+    /*
+     * Preferimos teletransportar
+     * para perto de um caçador.
+     */
+    for(const e of entities){
+        if(!e.alive)
+            continue;
+        if(
+            e.type!=="hunter"
+        )
+            continue;
+        if(e.team!=="human")
+            continue;
+        if(e.z!==player.z)
+            continue;
+        const d=
+            Math.hypot(
+                e.x-player.x,
+                e.y-player.y
+            );
+        if(
+            d<bestDistance
+        ){
+            bestDistance=d;
+            target=e;
+        }
+    }
+    let nx;
+    let ny;
+    if(target){
+        /*
+         * Vai para uma posição lateral/traseira
+         * em relação ao caçador.
+         */
+        const angle=
+            target.dir+
+            Math.PI+
+            (rng.next()-.5)*.8;
+        const distance=
+            45+rng.next()*65;
+        nx=
+            target.x+
+            Math.cos(angle)*distance;
+        ny=
+            target.y+
+            Math.sin(angle)*distance;
+    }else{
+        const angle=
+            player.dir;
+        nx=
+            player.x+
+            Math.cos(angle)*
+            (120+rng.next()*150);
+        ny=
+            player.y+
+            Math.sin(angle)*
+            (120+rng.next()*150);
+    }
+    if(
+        canMove(
+            player,
+            nx,
+            ny
+        )
+    ){
+        teleportFX(
+            player.x,
+            player.y,
+            player.z
+        );
+        player.x=nx;
+        player.y=ny;
+        teleportFX(
+            player.x,
+            player.y,
+            player.z
+        );
+        player.teleportCooldown=
+            TELEPORT_COOLDOWN;
+    }
+}
+/* =========================================================
+   IA
+========================================================= */
+function nearestEntity(e,filter){
+    let best=null;
+    let bestDistance=Infinity;
+    for(const o of entities){
+        if(!o.alive)
+            continue;
+        if(o.id===e.id)
+            continue;
+        if(o.z!==e.z)
+            continue;
+        if(!filter(o))
+            continue;
+        const d=
+            Math.hypot(
+                o.x-e.x,
+                o.y-e.y
+            );
+        if(d<bestDistance){
+            bestDistance=d;
+            best=o;
+        }
+    }
+    return {
+        entity:best,
+        distance:bestDistance
+    };
+}
+function wanderAI(e,dt){
+    if(
+        !e.path.length ||
+        e.pathIndex>=e.path.length
+    ){
+        const tx=
+            e.x+
+            (rng.next()-.5)*
+            500;
+        const ty=
+            e.y+
+            (rng.next()-.5)*
+            500;
+        e.path=
+            findPath(
+                e.x,
+                e.y,
+                e.z,
+                tx,
+                ty,
+                e.z
+            );
+        e.pathIndex=0;
+    }
+    if(e.path.length){
+        const p=
+            e.path[e.pathIndex];
+        const dx=
+            p.x-e.x;
+        const dy=
+            p.y-e.y;
+        if(
+            Math.hypot(dx,dy)<10
+        ){
+            e.pathIndex++;
+        }else{
+            tryMove(
+                e,
+                dx,
+                dy,
+                dt
+            );
+            e.dir=
+                Math.atan2(
+                    dy,
+                    dx
+                );
+        }
+    }
+}
+/* ---------------------------------------------------------
+   HUMANO
+--------------------------------------------------------- */
+function updateHumanAI(e,dt){
+    const vamp=
+        nearestEntity(
+            e,
+            o=>o.team==="vampire"
+        );
+    if(
+        vamp.entity &&
+        vamp.distance<260 &&
+        canSee(e,vamp.entity)
+    ){
+        e.state="flee";
+        const dx=
+            e.x-vamp.entity.x;
+        const dy=
+            e.y-vamp.entity.y;
+        tryMove(
+            e,
+            dx,
+            dy,
+            dt
+        );
+        e.dir=
+            Math.atan2(
+                dy,
+                dx
+            );
+        return;
+    }
+    wanderAI(e,dt);
+}
+/* ---------------------------------------------------------
+   CLÉRIGO (IA)
+--------------------------------------------------------- */
+function updateClericAI(e,dt){
+    e.cureCooldown=Math.max(0,(e.cureCooldown||0)-dt);
+    const vamp=nearestEntity(e,o=>o.team==="vampire");
+    if(vamp.entity && vamp.distance<420){
+        e.state="cure";
+        e.target=vamp.entity;
+        const dx=vamp.entity.x-e.x;
+        const dy=vamp.entity.y-e.y;
+        e.dir=Math.atan2(dy,dx);
+        if(vamp.distance>CURE_RANGE*0.85){
+            tryMove(e,dx,dy,dt);
+        }else if(vamp.distance<90){
+            tryMove(e,-dx,-dy,dt);
+        }
+        if(vamp.distance<=CURE_RANGE && canSee(e,vamp.entity)){
+            cureVampire(e,vamp.entity);
+        }
+        return;
+    }
+    wanderAI(e,dt);
+}
+/* ---------------------------------------------------------
+   VAMPIRO
+--------------------------------------------------------- */
+function updateVampireAI(e,dt){
+    const hunter=
+        nearestEntity(
+            e,
+            o=>
+                o.type==="hunter" &&
+                o.team==="human"
+        );
+    const human=
+        nearestEntity(
+            e,
+            o=>o.team==="human"
+        );
+    /*
+     * CAÇADOR DE FRENTE =
+     * FUGIR
+     */
+    if(
+        hunter.entity &&
+        hunter.distance<280 &&
+        canSee(e,hunter.entity) &&
+        !isBehind(e,hunter.entity)
+    ){
+        e.state="flee";
+        const dx=
+            e.x-hunter.entity.x;
+        const dy=
+            e.y-hunter.entity.y;
+        tryMove(
+            e,
+            dx,
+            dy,
+            dt
+        );
+        e.dir=
+            Math.atan2(
+                dy,
+                dx
+            );
+        /*
+         * Vampiros comuns podem
+         * escapar usando teleporte.
+         */
+        if(
+            e.type==="vampire" &&
+            e.teleportCooldown<=0 &&
+            rng.chance(.025)
+        ){
+            aiTeleport(e);
+        }
+        return;
+    }
+    /*
+     * PRIMEIRO TENTA HUMANOS
+     */
+    let target=null;
+    if(
+        human.entity &&
+        human.distance<450
+    ){
+        target=human.entity;
+    }
+    /*
+     * DEPOIS CAÇADORES
+     */
+    if(
+        !target &&
+        hunter.entity &&
+        hunter.distance<400
+    ){
+        target=hunter.entity;
+    }
+    if(!target){
+        wanderAI(e,dt);
+        return;
+    }
+    e.state="hunt";
+    e.target=target;
+    /*
+     * CAÇADOR INFECTADO
+     *
+     * 75% infectar
+     * 25% atirar
+     */
+    if(
+        e.type==="infected_hunter"
+    ){
+        const distance=
+            Math.hypot(
+                target.x-e.x,
+                target.y-e.y
+            );
+        if(
+            distance<95
+        ){
+            if(
+                rng.chance(.75)
+            ){
+                if(
+                    infect(
+                        e,
+                        target
+                    )
+                ){
+                    return;
+                }
+            }else{
+                e.dir=
+                    Math.atan2(
+                        target.y-e.y,
+                        target.x-e.x
+                    );
+                fireBullet(e);
+            }
+        }
+    }
+    /*
+     * SE FOR CAÇADOR,
+     * TENTA CHEGAR POR TRÁS
+     */
+    let aimX=target.x;
+    let aimY=target.y;
+    if(
+        target.type==="hunter"
+    ){
+        aimX=
+            target.x-
+            Math.cos(target.dir)*
+            60;
+        aimY=
+            target.y-
+            Math.sin(target.dir)*
+            60;
+    }
+    const dx=
+        aimX-e.x;
+    const dy=
+        aimY-e.y;
+    tryMove(
+        e,
+        dx,
+        dy,
+        dt
+    );
+    e.dir=
+        Math.atan2(
+            dy,
+            dx
+        );
+    /*
+     * TENTA INFECTAR
+     */
+    if(
+        Math.hypot(
+            e.x-target.x,
+            e.y-target.y
+        )<
+        INFECT_RANGE+5
+    ){
+        infect(
+            e,
+            target
+        );
+    }
+}
+/* ---------------------------------------------------------
+   CAÇADOR
+--------------------------------------------------------- */
+function updateHunterAI(e,dt){
+    const vamp=
+        nearestEntity(
+            e,
+            o=>o.team==="vampire"
+        );
+    if(
+        vamp.entity &&
+        vamp.distance<500
+    ){
+        const target=
+            vamp.entity;
+        e.state="attack";
+        e.target=target;
+        const dx=
+            target.x-e.x;
+        const dy=
+            target.y-e.y;
+        e.dir=
+            Math.atan2(
+                dy,
+                dx
+            );
+        /*
+         * Mantém distância
+         */
+        if(
+            vamp.distance>230
+        ){
+            tryMove(
+                e,
+                dx,
+                dy,
+                dt
+            );
+        }
+        else if(
+            vamp.distance<130
+        ){
+            tryMove(
+                e,
+                -dx,
+                -dy,
+                dt
+            );
+        }
+        /*
+         * ATIRA SE TIVER VISÃO
+         */
+        if(
+            canSee(e,target) &&
+            vamp.distance<430
+        ){
+            fireBullet(e);
+        }
+        return;
+    }
+    wanderAI(e,dt);
+}
+/* ---------------------------------------------------------
+   IA PRINCIPAL
+--------------------------------------------------------- */
+function updateAI(e,dt){
+    if(
+        !e.alive ||
+        e.isPlayer
+    )
+        return;
+    e.fireCooldown=
+        Math.max(
+            0,
+            e.fireCooldown-dt
+        );
+    e.teleportCooldown=
+        Math.max(
+            0,
+            e.teleportCooldown-dt
+        );
+    if(e.stairCooldown)
+        e.stairCooldown=Math.max(0,e.stairCooldown-dt);
+    if(e.team==="vampire"){
+        updateVampireAI(e,dt);
+        return;
+    }
+    if(e.type==="human"){
+        updateHumanAI(e,dt);
+        return;
+    }
+    if(e.type==="cleric"){
+        updateClericAI(e,dt);
+        return;
+    }
+    if(e.type==="hunter"){
+        updateHunterAI(e,dt);
+        return;
+    }
+}
+/* ---------------------------------------------------------
+   TELEPORTE DA IA
+--------------------------------------------------------- */
+function aiTeleport(e){
+    const hunter=
+        nearestEntity(
+            e,
+            o=>
+                o.type==="hunter" &&
+                o.team==="human"
+        );
+    if(!hunter.entity)
+        return;
+    const angle=
+        hunter.entity.dir+
+        Math.PI+
+        (rng.next()-.5)*.7;
+    const distance=
+        50+rng.next()*60;
+    const nx=
+        hunter.entity.x+
+        Math.cos(angle)*distance;
+    const ny=
+        hunter.entity.y+
+        Math.sin(angle)*distance;
+    if(
+        canMove(e,nx,ny)
+    ){
+        teleportFX(
+            e.x,
+            e.y,
+            e.z
+        );
+        e.x=nx;
+        e.y=ny;
+        teleportFX(
+            e.x,
+            e.y,
+            e.z
+        );
+        e.teleportCooldown=
+            TELEPORT_COOLDOWN;
+    }
+}
+/* =========================================================
+    JOGADOR
+========================================================= */
+function updatePlayer(dt){
+    if(
+        !player ||
+        !player.alive
+    )
+        return;
+    player.fireCooldown=
+        Math.max(
+            0,
+            player.fireCooldown-dt
+        );
+    player.teleportCooldown=
+        Math.max(
+            0,
+            player.teleportCooldown-dt
+        );
+    player.cureCooldown=
+        Math.max(
+            0,
+            (player.cureCooldown||0)-dt
+        );
+    if(player.stairCooldown)
+        player.stairCooldown=Math.max(0,player.stairCooldown-dt);
+    if(!player.isPlayer)
+        return;
+    let dx=0;
+    let dy=0;
+    if(
+        keys.w ||
+        keys.arrowup
+    )
+        dy--;
+    if(
+        keys.s ||
+        keys.arrowdown
+    )
+        dy++;
+    if(
+        keys.a ||
+        keys.arrowleft
+    )
+        dx--;
+    if(
+        keys.d ||
+        keys.arrowright
+    )
+        dx++;
+    if(touchJoy.active){
+        dx+=touchJoy.dx;
+        dy+=touchJoy.dy;
+    }
+    if(dx||dy){
+        tryMove(
+            player,
+            dx,
+            dy,
+            dt
+        );
+    }
+    /* MIRA */
+    if(!isMobile()){
+        const worldMouseX=
+            mouse.x+
+            camera.x;
+        const worldMouseY=
+            mouse.y+
+            camera.y;
+        player.dir=
+            Math.atan2(
+                worldMouseY-player.y,
+                worldMouseX-player.x
+            );
+    }
+    else if(dx||dy){
+        player.dir=
+            Math.atan2(dy,dx);
+    }
+    /*
+     * BOTÃO ESQUERDO
+     * Caçador -> tiro | Vampiro comum -> teleporte | Clérigo -> cura
+     */
+    if(
+        mouse.left ||
+        mobileLeft
+    ){
+        if(
+            player.type==="hunter" ||
+            player.type==="infected_hunter"
+        ){
+            fireBullet(player);
+        }
+        else if(player.type==="vampire"){
+            teleportPlayer();
+        }
+        else if(player.type==="cleric"){
+            playerCure();
+        }
+    }
+    /*
+     * BOTÃO DIREITO
+     * Vampiros -> infecção | Clérigo -> cura
+     */
+    if(
+        mouse.right ||
+        mobileRight
+    ){
+        if(
+            player.team==="vampire"
+        ){
+            playerInfect();
+        }
+        else if(player.type==="cleric"){
+            playerCure();
+        }
+    }
+}
+/* ---------------------------------------------------------
+    INFECÇÃO DO JOGADOR
+--------------------------------------------------------- */
+function playerInfect(){
+    let target=null;
+    let best=INFECT_RANGE+5;
+    for(const e of entities){
+        if(!e.alive)
+            continue;
+        if(e.id===player.id)
+            continue;
+        if(e.team==="vampire")
+            continue;
+        if(e.z!==player.z)
+            continue;
+        const d=
+            Math.hypot(
+                e.x-player.x,
+                e.y-player.y
+            );
+        if(d<best){
+            /*
+             * Para caçadores:
+             * precisa estar atrás.
+             */
+            if(
+                e.type==="hunter" &&
+                !isBehind(player,e)
+            ){
+                continue;
+            }
+            best=d;
+            target=e;
+        }
+    }
+    if(target){
+        infect(
+            player,
+            target
+        );
+    }
+}
+/* =========================================================
+   CÂMERA
+========================================================= */
+function updateCamera(){
+    if(!player)
+        return;
+    const viewW=
+        canvas.width;
+    const viewH=
+        canvas.height;
+    let targetX=
+        player.x-viewW/2;
+    let targetY=
+        player.y-viewH/2;
+    const maxX=
+        Math.max(
+            0,
+            WORLD_W*TILE-viewW
+        );
+    const maxY=
+        Math.max(
+            0,
+            WORLD_H*TILE-viewH
+        );
+    targetX=
+        Math.max(
+            0,
+            Math.min(
+                maxX,
+                targetX
+            )
+        );
+    targetY=
+        Math.max(
+            0,
+            Math.min(
+                maxY,
+                targetY
+            )
+        );
+    camera.x +=
+        (targetX-camera.x)*.14;
+    camera.y +=
+        (targetY-camera.y)*.14;
+}
+/* =========================================================
+   RENDER
+========================================================= */
+function render(){
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+    /*
+     * FUNDO
+     */
+    ctx.fillStyle="#0d0d14";
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+    if(!world.length){
+        return;
+    }
+    const startX=
+        Math.max(
+            0,
+            Math.floor(camera.x/TILE)-2
+        );
+    const startY=
+        Math.max(
+            0,
+            Math.floor(camera.y/TILE)-2
+        );
+    const endX=
+        Math.min(
+            WORLD_W,
+            Math.ceil(
+                (camera.x+canvas.width)/TILE
+            )+2
+        );
+    const endY=
+        Math.min(
+            WORLD_H,
+            Math.ceil(
+                (camera.y+canvas.height)/TILE
+            )+2
+        );
+    const focusZ=
+        player
+            ? player.z
+            : 0;
+    /* -----------------------------------------------------
+       TILES
+    ----------------------------------------------------- */
+    for(
+        let z=0;
+        z<=focusZ;
+        z++
+    ){
+        const alpha=
+            z===focusZ
+                ? 1
+                : .25;
+        ctx.globalAlpha=alpha;
+        for(
+            let y=startY;
+            y<endY;
+            y++
+        ){
+            for(
+                let x=startX;
+                x<endX;
+                x++
+            ){
+                const tile=
+                    world[z][y][x];
+                const sx=
+                    x*TILE-camera.x;
+                const sy=
+                    y*TILE-camera.y;
+                if(tile===T.GRASS){
+                    ctx.fillStyle=
+                        z===0
+                            ? "#141823"
+                            : "#1c1d29";
+                    ctx.fillRect(
+                        sx,
+                        sy,
+                        TILE,
+                        TILE
+                    );
+                    /*
+                     * pequenos detalhes
+                     */
+                    if(
+                        (x*13+y*7+z)%17===0
+                    ){
+                        ctx.fillStyle="#1c2730";
+                        ctx.fillRect(
+                            sx+8,
+                            sy+15,
+                            3,
+                            3
+                        );
+                    }
+                }
+                else if(tile===T.ROAD){
+                    ctx.fillStyle=
+                        "#11121a";
+                    ctx.fillRect(
+                        sx,
+                        sy,
+                        TILE,
+                        TILE
+                    );
+                    ctx.strokeStyle=
+                        "#181a24";
+                    ctx.strokeRect(
+                        sx,
+                        sy,
+                        TILE,
+                        TILE
+                    );
+                }
+                else if(tile===T.FLOOR){
+                    ctx.fillStyle=
+                        z===0
+                            ? "#1b1b25"
+                            : "#252536";
+                    ctx.fillRect(
+                        sx,
+                        sy,
+                        TILE,
+                        TILE
+                    );
+                    ctx.strokeStyle=
+                        "#252532";
+                    ctx.strokeRect(
+                        sx,
+                        sy,
+                        TILE,
+                        TILE
+                    );
+                }
+                else if(tile===T.WALL){
+                    ctx.fillStyle=
+                        z===0
+                            ? "#292936"
+                            : "#35354a";
+                    ctx.fillRect(
+                        sx,
+                        sy,
+                        TILE,
+                        TILE
+                    );
+                    ctx.fillStyle=
+                        "#1b1b25";
+                    ctx.fillRect(
+                        sx,
+                        sy+TILE-5,
+                        TILE,
+                        5
+                    );
+                }
+                else if(tile===T.DOOR){
+                    ctx.fillStyle="#55371e";
+                    ctx.fillRect(
+                        sx+5,
+                        sy+3,
+                        TILE-10,
+                        TILE-6
+                    );
+                }
+                else if(tile===T.WINDOW){
+                    ctx.fillStyle="#172c42";
+                    ctx.fillRect(
+                        sx+5,
+                        sy+5,
+                        TILE-10,
+                        TILE-10
+                    );
+                    ctx.strokeStyle="#4a7fa8";
+                    ctx.strokeRect(
+                        sx+5,
+                        sy+5,
+                        TILE-10,
+                        TILE-10
+                    );
+                }
+                else if(
+                    tile===T.STAIR_UP ||
+                    tile===T.STAIR_DOWN
+                ){
+                    ctx.fillStyle="#293d4d";
+                    ctx.fillRect(
+                        sx,
+                        sy,
+                        TILE,
+                        TILE
+                    );
+                    ctx.strokeStyle="#7190a5";
+                    for(let i=0;i<4;i++){
+                        ctx.beginPath();
+                        ctx.moveTo(
+                            sx+5,
+                            sy+7+i*5
+                        );
+                        ctx.lineTo(
+                            sx+27,
+                            sy+7+i*5
+                        );
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+    }
+    ctx.globalAlpha=1;
+    /* -----------------------------------------------------
+       ENTIDADES
+    ----------------------------------------------------- */
+    for(const e of entities){
+        if(!e.alive)
+            continue;
+        if(e.z!==focusZ)
+            continue;
+        const sx=
+            e.x-camera.x;
+        const sy=
+            e.y-camera.y;
+        if(
+            sx<-50 ||
+            sy<-50 ||
+            sx>canvas.width+50 ||
+            sy>canvas.height+50
+        )
+            continue;
+        /*
+         * sombra
+         */
+        ctx.fillStyle="#0008";
+        ctx.beginPath();
+        ctx.ellipse(
+            sx,
+            sy+9,
+            13,
+            6,
+            0,
+            0,
+            Math.PI*2
+        );
+        ctx.fill();
+        /*
+         * corpo
+         */
+        ctx.beginPath();
+        ctx.arc(
+            sx,
+            sy,
+            e.radius,
+            0,
+            Math.PI*2
+        );
+        ctx.fillStyle=
+            e.color;
+        ctx.fill();
+        /*
+         * detalhes
+         */
+        if(e.type==="human"){
+            ctx.fillStyle="#bde8ff";
+            ctx.fillRect(
+                sx-7,
+                sy-3,
+                14,
+                5
+            );
+        }
+        if(e.type==="cleric"){
+            ctx.fillStyle="#ffffff";
+            ctx.fillRect(sx-8,sy-5,16,12);
+            ctx.strokeStyle="#d4af37";
+            ctx.lineWidth=2;
+            ctx.beginPath();
+            ctx.moveTo(sx-6,sy-2);
+            ctx.lineTo(sx+6,sy-2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(sx,sy-6);
+            ctx.lineTo(sx,sy+6);
+            ctx.stroke();
+        }
+        if(e.type==="vampire"){
+            ctx.fillStyle="#09090d";
+            ctx.fillRect(
+                sx-7,
+                sy+1,
+                14,
+                7
+            );
+        }
+        if(
+            e.type==="hunter" ||
+            e.type==="infected_hunter"
+        ){
+            /*
+             * roupa preta
+             */
+            ctx.fillStyle=
+                e.type==="hunter"
+                    ? "#07070a"
+                    : "#21070d";
+            ctx.fillRect(
+                sx-8,
+                sy-4,
+                16,
+                12
+            );
+            /*
+             * detalhe dourado
+             * ou vermelho
+             */
+            ctx.strokeStyle=
+                e.type==="hunter"
+                    ? "#d4af37"
+                    : "#c41e3a";
+            ctx.lineWidth=3;
+            ctx.beginPath();
+            ctx.moveTo(
+                sx-6,
+                sy-1
+            );
+            ctx.lineTo(
+                sx+6,
+                sy+5
+            );
+            ctx.stroke();
+            /*
+             * arma
+             */
+            ctx.strokeStyle=
+                e.type==="hunter"
+                    ? "#d4af37"
+                    : "#ff526e";
+            ctx.lineWidth=3;
+            ctx.beginPath();
+            ctx.moveTo(
+                sx+
+                Math.cos(e.dir)*5,
+                sy+
+                Math.sin(e.dir)*5
+            );
+            ctx.lineTo(
+                sx+
+                Math.cos(e.dir)*22,
+                sy+
+                Math.sin(e.dir)*22
+            );
+            ctx.stroke();
+        }
+        /*
+         * direção
+         */
+        ctx.strokeStyle="#ffffff99";
+        ctx.lineWidth=2;
+        ctx.beginPath();
+        ctx.moveTo(
+            sx,
+            sy
+        );
+        ctx.lineTo(
+            sx+
+            Math.cos(e.dir)*
+            (e.radius+7),
+            sy+
+            Math.sin(e.dir)*
+            (e.radius+7)
+        );
+        ctx.stroke();
+        /*
+        * jogador
+         */
+        if(e.isPlayer){
+            ctx.strokeStyle="#fff";
+            ctx.lineWidth=2.5;
+            ctx.beginPath();
+            ctx.arc(
+                sx,
+                sy,
+                e.radius+4,
+                0,
+                Math.PI*2
+            );
+            ctx.stroke();
+        }
+    }
+    /* -----------------------------------------------------
+       BALAS
+    ----------------------------------------------------- */
+    for(const b of bullets){
+        if(b.z!==focusZ)
+            continue;
+        ctx.fillStyle=
+            b.team==="human"
+                ? "#ffe066"
+                : "#ff5470";
+        ctx.beginPath();
+        ctx.arc(
+            b.x-camera.x,
+            b.y-camera.y,
+            3,
+            0,
+            Math.PI*2
+        );
+        ctx.fill();
+    }
+    /* -----------------------------------------------------
+       PARTICULAS
+    ----------------------------------------------------- */
+    for(const p of particles){
+        if(p.z!==focusZ)
+            continue;
+        ctx.globalAlpha=
+            Math.max(
+                0,
+                p.life*2
+            );
+        ctx.fillStyle=
+            p.color;
+        ctx.fillRect(
+            p.x-camera.x-2,
+            p.y-camera.y-2,
+            4,
+            4
+        );
+    }
+    ctx.globalAlpha=1;
+    renderMinimap();
+}
+/* =========================================================
+   MINIMAPA
+========================================================= */
+function renderMinimap(){
+    const size=150;
+    const scale=
+        size/(WORLD_W*TILE);
+    minimapCtx.fillStyle="#08080e";
+    minimapCtx.fillRect(
+        0,
+        0,
+        size,
+        size
+    );
+    /*
+     * mapa
+     */
+    for(
+        let y=0;
+        y<WORLD_H;
+        y+=2
+    ){
+        for(
+            let x=0;
+            x<WORLD_W;
+            x+=2
+        ){
+            const tile=
+                world[0][y][x];
+            if(
+                tile===T.ROAD
+            ){
+                minimapCtx.fillStyle=
+                    "#242530";
+            }
+            else if(
+                tile===T.WALL
+            ){
+                minimapCtx.fillStyle=
+                    "#3b3b49";
+            }
+            else{
+                continue;
+            }
+            minimapCtx.fillRect(
+                x*TILE*scale,
+                y*TILE*scale,
+                TILE*scale*2,
+                TILE*scale*2
+            );
+        }
+    }
+    /*
+     * entidades
+     */
+    for(const e of entities){
+        if(!e.alive)
+            continue;
+        const x=
+            e.x*scale;
+        const y=
+            e.y*scale;
+        minimapCtx.beginPath();
+        minimapCtx.arc(
+            x,
+            y,
+            e.isPlayer?4:2.2,
+            0,
+            Math.PI*2
+        );
+        if(e.isPlayer){
+            minimapCtx.fillStyle="#fff";
+        }
+        else if(
+            e.team==="vampire"
+        ){
+            minimapCtx.fillStyle=
+                "#c41e3a";
+        }
+        else if(
+            e.type==="hunter"
+        ){
+            minimapCtx.fillStyle=
+                "#d4af37";
+        }
+        else if(
+            e.type==="cleric"
+        ){
+            minimapCtx.fillStyle=
+                "#f0e6c0";
+        }
+        else{
+            minimapCtx.fillStyle=
+                "#4da6ff";
+        }
+        minimapCtx.fill();
+    }
+}
+/* =========================================================
+   POPULATION BAR
+========================================================= */
+function updatePopulation(){
+    let humans=0;
+    let vampires=0;
+    let hunters=0;
+    let clerics=0;
+    for(const e of entities){
+        if(!e.alive)
+            continue;
+        if(e.team==="human"){
+            humans++;
+            if(e.type==="hunter")
+                hunters++;
+            if(e.type==="cleric")
+                clerics++;
+        }else{
+            vampires++;
+        }
+    }
+    const total=
+        humans+vampires;
+    const hp=
+        total
+            ? humans/total*100
+            : 0;
+    const vp=
+        total
+            ? vampires/total*100
+            : 0;
+    document
+        .getElementById(
+            "pop-bar-human"
+        )
+        .style.width=
+            hp+"%";
+    document
+        .getElementById(
+            "pop-bar-vamp"
+        )
+        .style.width=
+            vp+"%";
+    document
+        .getElementById(
+            "pop-text"
+        )
+        .textContent=
+            `${Math.round(hp)}% Humanos | ${Math.round(vp)}% Vampiros`;
+    document
+        .getElementById(
+            "pop-detail"
+        )
+        .textContent=
+            `${total} vivos • ${humans} humanos • ${vampires} vampiros • ${hunters} caçadores • ${clerics} clérigos`;
+    /*
+     * condição de vitória
+     */
+    if(gameState!=="playing")
+        return;
+    if(
+        !player ||
+        !player.alive
+    ){
+        endGame(
+            false,
+            mode==="vampire"
+                ? "Você foi eliminado."
+                : "Você foi eliminado."
+        );
+        return;
+    }
+    if(
+        mode==="vampire" &&
+        humans===0
+    ){
+        endGame(
+            true,
+            "Todos os humanos e caçadores foram infectados!"
+        );
+        return;
+    }
+    if(
+        mode==="hunter" &&
+        vampires===0
+    ){
+        endGame(
+            true,
+            "Todos os vampiros foram eliminados!"
+        );
+    }
+}
+/* =========================================================
+   PAUSE
+========================================================= */
+function togglePause(){
+    if(
+        gameState!=="playing" &&
+        gameState!=="paused"
+    )
+        return;
+    if(gameState==="playing"){
+        gameState="paused";
+        document
+            .getElementById(
+                "pause-screen"
+            )
+            .style.display="flex";
+    }else{
+        resumeGame();
+    }
+}
+function resumeGame(){
+    gameState="playing";
+    document
+        .getElementById(
+            "pause-screen"
+        )
+        .style.display="none";
+    lastTime=
+        performance.now();
+}
+/* =========================================================
+   MENU PRINCIPAL
+========================================================= */
+function returnToMenu(){
+    gameState="menu";
+    player=null;
+    entities=[];
+    bullets=[];
+    particles=[];
+    document
+        .getElementById(
+            "pause-screen"
+        )
+        .style.display="none";
+    document
+        .getElementById(
+            "game-over"
+        )
+        .style.display="none";
+    document
+        .getElementById(
+            "victory"
+        )
+        .style.display="none";
+    document
+        .getElementById(
+            "menu"
+        )
+        .style.display="flex";
+    document
+        .getElementById(
+            "class-select"
+        )
+        .style.display="none";
+    document
+        .getElementById(
+            "class-select-hunter"
+        )
+        .style.display="none";
+    document
+        .getElementById(
+            "btn-vampire"
+        )
+        .style.display="block";
+    document
+        .getElementById(
+            "btn-hunter"
+        )
+        .style.display="block";
+    playerClass=null;
+    mode=null;
+}
+/* =========================================================
+    FIM DE JOGO
+========================================================= */
+function endGame(win,msg){
+    gameState="over";
+    if(win){
+        document
+            .getElementById(
+                "victory"
+            )
+            .style.display="flex";
+        document
+            .getElementById(
+                "victory-msg"
+            )
+            .textContent=msg;
+    }else{
+        document
+            .getElementById(
+                "game-over"
+            )
+            .style.display="flex";
+        document
+            .getElementById(
+                "defeat-msg"
+            )
+            .textContent=msg;
+    }
+}
+/* =========================================================
+    ENTRADA
+========================================================= */
+function setupInput(){
+    /*
+     * TECLADO
+     */
+    window.addEventListener(
+        "keydown",
+        e=>{
+            const key=
+                e.key.toLowerCase();
+            if(
+                key==="p"
+            ){
+                e.preventDefault();
+                togglePause();
+                return;
+            }
+            if(
+                key==="escape"
+            ){
+                e.preventDefault();
+                if(
+                    gameState==="paused"
+                ){
+                    resumeGame();
+                }
+                else if(
+                    gameState==="playing"
+                ){
+                    returnToMenu();
+                }
+                return;
+            }
+            keys[key]=true;
+        }
+    );
+    window.addEventListener(
+        "keyup",
+        e=>{
+            keys[
+                e.key.toLowerCase()
+            ]=false;
+        }
+    );
+    /*
+     * MOUSE
+     */
+    canvas.addEventListener(
+        "mousemove",
+        e=>{
+            const rect=
+                canvas.getBoundingClientRect();
+            mouse.x=
+                e.clientX-
+                rect.left;
+            mouse.y=
+                e.clientY-
+                rect.top;
+        }
+    );
+    canvas.addEventListener(
+        "contextmenu",
+        e=>e.preventDefault()
+    );
+    canvas.addEventListener(
+        "mousedown",
+        e=>{
+            if(
+                e.button===0
+            ){
+                mouse.left=true;
+            }
+            if(
+                e.button===2
+            ){
+                mouse.right=true;
+            }
+        }
+    );
+    window.addEventListener(
+        "mouseup",
+        e=>{
+            if(
+                e.button===0
+            ){
+                mouse.left=false;
+            }
+            if(
+                e.button===2
+            ){
+                mouse.right=false;
+            }
+        }
+    );
+    /*
+    * TOQUE
+     */
+    if(isMobile()){
+        document
+            .getElementById(
+                "mobile-controls"
+            )
+            .style.display="block";
+        const zone=
+            document.getElementById(
+                "joystick-zone"
+            );
+        const knob=
+            document.getElementById(
+                "joystick-knob"
+            );
+        let joystickId=null;
+        zone.addEventListener(
+            "touchstart",
+            e=>{
+                e.preventDefault();
+                const t=
+                    e.changedTouches[0];
+                joystickId=
+                    t.identifier;
+                touchJoy.active=true;
+                updateJoystick(
+                    t,
+                    zone,
+                    knob
+                );
+            },
+            {passive:false}
+        );
+        window.addEventListener(
+            "touchmove",
+            e=>{
+                for(
+                    const t
+                    of e.changedTouches
+                ){
+                    if(
+                        t.identifier===
+                        joystickId
+                    ){
+                        updateJoystick(
+                            t,
+                            zone,
+                            knob
+                        );
+                    }
+                }
+            },
+            {passive:false}
+        );
+        window.addEventListener(
+            "touchend",
+            e=>{
+                for(
+                    const t
+                    of e.changedTouches
+                ){
+                    if(
+                        t.identifier===
+                        joystickId
+                    ){
+                        joystickId=null;
+                        touchJoy.active=false;
+                        touchJoy.dx=0;
+                        touchJoy.dy=0;
+                        knob.style.left="42px";
+                        knob.style.top="42px";
+                    }
+                }
+            }
+        );
+        const left=
+            document.getElementById(
+                "mobile-left"
+            );
+        const right=
+            document.getElementById(
+                "mobile-right"
+            );
+        left.addEventListener(
+            "touchstart",
+            e=>{
+                e.preventDefault();
+                /*
+                 * Vampiro comum:
+                 * botão esquerdo = teleporte
+                 */
+                if(
+                    player &&
+                    player.type==="vampire"
+                ){
+                    teleportPlayer();
+                }else{
+                    mobileLeft=true;
+                }
+            },
+            {passive:false}
+        );
+        left.addEventListener(
+            "touchend",
+            e=>{
+                e.preventDefault();
+                mobileLeft=false;
+            },
+            {passive:false}
+        );
+        right.addEventListener(
+            "touchstart",
+            e=>{
+                e.preventDefault();
+                mobileRight=true;
+            },
+            {passive:false}
+        );
+        right.addEventListener(
+            "touchend",
+            e=>{
+                e.preventDefault();
+                mobileRight=false;
+            },
+            {passive:false}
+        );
+    }
+}
+/* ---------------------------------------------------------
+   JOYSTICK
+--------------------------------------------------------- */
+function updateJoystick(
+    touch,
+    zone,
+    knob
+){
+    const rect=
+        zone.getBoundingClientRect();
+    let dx=
+        touch.clientX-
+        (rect.left+72.5);
+    let dy=
+        touch.clientY-
+        (rect.top+72.5);
+    const max=42;
+    const len=
+        Math.hypot(dx,dy);
+    if(len>max){
+        dx=
+            dx/len*max;
+        dy=
+            dy/len*max;
+    }
+    knob.style.left=
+        (42+dx)+"px";
+    knob.style.top=
+        (42+dy)+"px";
+    touchJoy.dx=
+        dx/max;
+    touchJoy.dy=
+        dy/max;
+}
+/* =========================================================
+    CONTROLES MOVEIS
+========================================================= */
+function isMobile(){
+    return (
+        /Android|iPhone|iPad|iPod|Mobile/i
+            .test(navigator.userAgent)
+        ||
+        window.innerWidth<800
+    );
+}
+/* =========================================================
+   SAVE
+========================================================= */
+function saveGame(){
+    if(
+        gameState!=="playing" ||
+        !player
+    )
+        return;
+    const data={
+        seed,
+        mode,
+        playerClass,
+        player:{
+            x:player.x,
+            y:player.y,
+            z:player.z,
+            type:player.type
+        },
+        time:gameTime
+    };
+    try{
+        localStorage.setItem(
+            "nightfall_save",
+            JSON.stringify(data)
+        );
+    }catch(e){}
+}
+/* =========================================================
+   RESIZE
+========================================================= */
+function resize(){
+    const boardSize=
+        Math.max(
+            1,
+            Math.min(
+                window.innerWidth,
+                window.innerHeight-34
+            )
+        );
+    canvas.width=boardSize;
+    canvas.height=boardSize;
+}
+window.addEventListener(
+    "resize",
+    resize
+);
+/* =========================================================
+   LOOP
+========================================================= */
+function loop(timestamp){
+    if(!lastTime)
+        lastTime=timestamp;
+    const dt=
+        Math.min(
+            .05,
+            (timestamp-lastTime)/1000
+        );
+    lastTime=timestamp;
+    if(
+        gameState==="playing"
+    ){
+        gameTime+=dt;
+        updatePlayer(dt);
+        for(const e of entities){
+            updateAI(
+                e,
+                dt
+            );
+        }
+        updateBullets(dt);
+        /*
+         * PARTICULAS
+         */
+        for(
+            let i=particles.length-1;
+            i>=0;
+            i--
+        ){
+            const p=
+                particles[i];
+            p.x+=
+                p.vx*dt;
+            p.y+=
+                p.vy*dt;
+            p.life-=dt;
+            if(
+                p.life<=0
+            ){
+                particles.splice(i,1);
+            }
+        }
+        updateCamera();
+        updatePopulation();
+        /*
+         * SALVAMENTO:
+         * SOMENTE A CADA 5 MINUTOS
+         */
+        if(
+            gameTime-lastSave>=300
+        ){
+            saveGame();
+            lastSave=gameTime;
+        }
+        /*
+         * INTERFACE
+         */
+        if(player){
+            let ability="";
+            if(
+                player.type==="vampire"
+            ){
+                ability=
+                    player.teleportCooldown>0
+                    ? `Teleporte: ${player.teleportCooldown.toFixed(1)}s`
+                    : "ESQ: Teleporte | DIR: Infectar";
+            }
+            else if(
+                player.type==="infected_hunter"
+            ){
+                ability=
+                    "ESQ: Atirar | DIR: Infectar";
+            }
+            else if(
+                player.type==="cleric"
+            ){
+                ability=
+                    player.cureCooldown>0
+                    ? `Cura: ${player.cureCooldown.toFixed(1)}s`
+                    : "ESQ/DIR: Purificar vampiro";
+            }
+            else{
+                ability=
+                    "ESQ: Atirar";
+            }
+            document
+                .getElementById(
+                    "ability-info"
+                )
+                .textContent=
+                    ability;
+            document
+                .getElementById(
+                    "hp-info"
+                )
+                .textContent=
+                    `● Vivo • Andar ${player.z+1}`;
+        }
+    }
+    render();
+    requestAnimationFrame(loop);
+}
+/* =========================================================
+   START GAME
+========================================================= */
+function startGame(){
+    seed=
+        parseInt(
+            document
+                .getElementById(
+                    "seed-input"
+                )
+                .value
+        ) || 48372915;
+    generateWorld(seed);
+    spawnWorld();
+    document
+        .getElementById(
+            "menu"
+        )
+        .style.display="none";
+    document
+        .getElementById(
+            "mode-badge"
+        )
+        .textContent=
+            mode==="vampire"
+            ? (
+                playerClass==="common"
+                    ? "🧛 VAMPIRO COMUM"
+                    : "🩸 CAÇADOR INFECTADO"
+              )
+            : (
+                playerClass==="cleric"
+                    ? "✝️ CLÉRIGO"
+                    : "🔫 CAÇADOR"
+              );
+    /*
+     * IMPORTANTE:
+         * configurar a entrada somente uma vez
+     */
+    if(!window.inputInitialized){
+        setupInput();
+        window.inputInitialized=true;
+    }
+    gameState="playing";
+    gameTime=0;
+    lastSave=0;
+    lastTime=
+        performance.now();
+    camera.x=
+        Math.max(
+            0,
+            player.x-
+            canvas.width/2
+        );
+    camera.y=
+        Math.max(
+            0,
+            player.y-
+            canvas.height/2
+        );
+    resize();
+}
+/* =========================================================
+   MENU
+========================================================= */
+document
+    .getElementById(
+        "btn-vampire"
+    )
+    .onclick=()=>{
+        mode="vampire";
+        document
+            .getElementById(
+                "class-select"
+            )
+            .style.display="block";
+        document
+            .getElementById(
+                "btn-vampire"
+            )
+            .style.display="none";
+        document
+            .getElementById(
+                "btn-hunter"
+            )
+            .style.display="none";
+    };
+document
+    .getElementById(
+        "btn-hunter"
+    )
+    .onclick=()=>{
+        mode="hunter";
+        document
+            .getElementById(
+                "class-select-hunter"
+            )
+            .style.display="block";
+        document
+            .getElementById(
+                "btn-vampire"
+            )
+            .style.display="none";
+        document
+            .getElementById(
+                "btn-hunter"
+            )
+            .style.display="none";
+    };
+document
+    .querySelectorAll(
+        ".class-card"
+    )
+    .forEach(card=>{
+        card.onclick=()=>{
+            const parent=card.parentElement;
+            parent
+                .querySelectorAll(
+                    ".class-card"
+                )
+                .forEach(
+                    c=>
+                        c.classList.remove(
+                            "selected"
+                        )
+                );
+            card.classList.add(
+                "selected"
+            );
+            playerClass=
+                card.dataset.class;
+        };
+    });
+document
+    .getElementById(
+        "btn-start-vamp"
+    )
+    .onclick=()=>{
+        if(!playerClass)
+            playerClass="common";
+        startGame();
+    };
+document
+    .getElementById(
+        "btn-start-hunter"
+    )
+    .onclick=()=>{
+        if(!playerClass)
+            playerClass="hunter";
+        startGame();
+    };
+document
+    .getElementById(
+        "btn-random-seed"
+    )
+    .onclick=()=>{
+        document
+            .getElementById(
+                "seed-input"
+            )
+            .value=
+                Math.floor(
+                    Math.random()*
+                    999999999
+                );
+    };
+/* =========================================================
+   BOTÕES DOS OVERLAYS
+========================================================= */
+document
+    .getElementById(
+        "btn-defeat-menu"
+    )
+    .onclick=()=>{
+        returnToMenu();
+    };
+document
+    .getElementById(
+        "btn-victory-menu"
+    )
+    .onclick=()=>{
+        returnToMenu();
+    };
+/* =========================================================
+   INIT
+========================================================= */
+resize();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
