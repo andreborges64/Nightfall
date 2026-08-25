@@ -31,10 +31,9 @@ canvas{
 #game{
     position:absolute;
     top:0;
-    left:50%;
-    width:min(100vw,calc(100vh - 34px));
-    height:min(100vw,calc(100vh - 34px));
-    transform:translateX(-50%);
+    left:0;
+    width:100vw;
+    height:100vh;
 }
 button,input{
     font:inherit;
@@ -3483,16 +3482,8 @@ function saveGame(){
    RESIZE
 ========================================================= */
 function resize(){
-    const boardSize=
-        Math.max(
-            1,
-            Math.min(
-                window.innerWidth,
-                window.innerHeight-34
-            )
-        );
-    canvas.width=boardSize;
-    canvas.height=boardSize;
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight;
 }
 window.addEventListener(
     "resize",
