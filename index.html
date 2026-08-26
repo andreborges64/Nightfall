@@ -582,6 +582,7 @@ const STARTING_VAMPIRES = 5;
 const CLERIC_COUNT = 3;
 const INFECT_RANGE = 30;
 const FIRE_COOLDOWN = .32;
+const CLOSE_REACTION_DELAY = 1.0;
 const BULLET_SPEED = 520;
 const BULLET_LIFE = 1.5;
 const TELEPORT_COOLDOWN = 4.5;
@@ -589,7 +590,8 @@ const TELEPORT_RANGE = 450;
 const VISION_RANGE = 420;
 const FOV = Math.PI * .75;
 const CURE_RANGE = 200;
-const CURE_COOLDOWN = 2.0;
+const TOUCH_CURE_RANGE = 30;
+const CURE_COOLDOWN = 1.0;
 /* ---------------------------------------------------------
    CANVAS
 --------------------------------------------------------- */
@@ -1003,6 +1005,7 @@ function createEntity(
         fireCooldown:0,
         teleportCooldown:0,
         cureCooldown:0,
+        closeReactionTimer:0,
         stairCooldown:0,
         state:"wander",
         target:null,
@@ -1425,19 +1428,21 @@ function infect(
 /* =========================================================
    CURA / PURIFICAÇÃO (CLÉRIGO)
 ========================================================= */
-function cureVampire(cleric, target){
+function cureVampire(cleric, target, useCooldown=true){
     if(!cleric || !cleric.alive) return false;
     if(cleric.type!=="cleric") return false;
     if(!target || !target.alive) return false;
     if(target.team!=="vampire") return false;
     if(cleric.z!==target.z) return false;
-    if(cleric.cureCooldown>0) return false;
+    if(useCooldown && cleric.cureCooldown>0) return false;
     const distance=Math.hypot(
         cleric.x-target.x,
         cleric.y-target.y
     );
     if(distance>CURE_RANGE) return false;
-    cleric.cureCooldown=CURE_COOLDOWN;
+    if(useCooldown){
+        cleric.cureCooldown=CURE_COOLDOWN;
+    }
     const original=target.originalType || "human";
     if(original==="hunter" || target.type==="infected_hunter"){
         target.type="hunter";
@@ -1479,12 +1484,12 @@ function cureVampire(cleric, target){
     }
     return true;
 }
-function playerCure(){
+function playerCure(range=CURE_RANGE, useCooldown=true){
     if(!player || !player.alive) return;
     if(player.type!=="cleric") return;
-    if(player.cureCooldown>0) return;
+    if(useCooldown && player.cureCooldown>0) return;
     let target=null;
-    let best=CURE_RANGE;
+    let best=range;
     for(let i=0;i<entities.length;i++){
         const e=entities[i];
         if(!e.alive) continue;
@@ -1498,7 +1503,7 @@ function playerCure(){
         }
     }
     if(target){
-        cureVampire(player,target);
+        cureVampire(player,target,useCooldown);
     }
 }
 /* =========================================================
@@ -1904,6 +1909,14 @@ function updateClericAI(e,dt){
     e.cureCooldown=Math.max(0,(e.cureCooldown||0)-dt);
     const vamp=nearestEntity(e,o=>o.team==="vampire");
     if(vamp.entity && vamp.distance<420){
+        if(vamp.distance>=90){
+            e.closeReactionTimer=0;
+        }else if(e.closeReactionTimer>0){
+            return;
+        }else if(e.cureCooldown<=0){
+            e.closeReactionTimer=CLOSE_REACTION_DELAY;
+            return;
+        }
         e.state="cure";
         e.target=vamp.entity;
         const dx=vamp.entity.x-e.x;
@@ -2102,6 +2115,14 @@ function updateHunterAI(e,dt){
         vamp.entity &&
         vamp.distance<500
     ){
+        if(vamp.distance>=130){
+            e.closeReactionTimer=0;
+        }else if(e.closeReactionTimer>0){
+            return;
+        }else if(e.fireCooldown<=0){
+            e.closeReactionTimer=CLOSE_REACTION_DELAY;
+            return;
+        }
         const target=
             vamp.entity;
         e.state="attack";
@@ -2169,6 +2190,11 @@ function updateAI(e,dt){
         Math.max(
             0,
             e.teleportCooldown-dt
+        );
+    e.closeReactionTimer=
+        Math.max(
+            0,
+            (e.closeReactionTimer||0)-dt
         );
     if(e.stairCooldown)
         e.stairCooldown=Math.max(0,e.stairCooldown-dt);
@@ -2348,7 +2374,7 @@ function updatePlayer(dt){
             playerInfect();
         }
         else if(player.type==="cleric"){
-            playerCure();
+            playerCure(TOUCH_CURE_RANGE,false);
         }
     }
 }
