@@ -403,6 +403,9 @@ button,input{
     <button class="menu-btn" id="btn-hunter">
         🔫 MODO CAÇADOR
     </button>
+    <button class="menu-btn" id="btn-chaos">
+        🎲 MODO CAOS
+    </button>
     <div class="seed-box">
         <label>SEED:</label>
         <input
@@ -1048,7 +1051,25 @@ function spawnWorld(){
     nextId=1;
     /* JOGADOR */
     let pos=findSpawnPos();
-    if(mode==="vampire"){
+    if(mode==="random"){
+        const randomClass=rng.int(0,3);
+        if(randomClass===0){
+            playerClass="common";
+            player=createEntity("vampire",pos.x,pos.y,pos.z,{speed:115});
+        }else if(randomClass===1){
+            playerClass="infected";
+            player=createEntity(
+                "infected_hunter",pos.x,pos.y,pos.z,
+                {speed:100,infected:true,originalType:"hunter"}
+            );
+        }else if(randomClass===2){
+            playerClass="hunter";
+            player=createEntity("hunter",pos.x,pos.y,pos.z,{speed:100});
+        }else{
+            playerClass="cleric";
+            player=createEntity("cleric",pos.x,pos.y,pos.z,{speed:90});
+        }
+    }else if(mode==="vampire"){
         if(playerClass==="common"){
             player=createEntity(
                 "vampire",
@@ -1115,7 +1136,7 @@ function spawnWorld(){
     }
     /* CAÇADORES */
     const hunters =
-        mode==="hunter"
+        mode==="hunter" || mode==="random"
             ? HUNTERS_ALLY
             : 3;
     for(let i=0;i<hunters;i++){
@@ -1151,7 +1172,7 @@ function spawnWorld(){
     }
     /* VAMPIROS INICIAIS
        SOMENTE NO MODO CAÇADOR */
-    if(mode==="hunter"){
+    if(mode==="hunter" || mode==="random"){
         for(
             let i=0;
             i<STARTING_VAMPIRES;
@@ -1444,12 +1465,16 @@ function cureVampire(cleric, target, useCooldown=true){
         cleric.cureCooldown=CURE_COOLDOWN;
     }
     const original=target.originalType || "human";
-    if(original==="hunter" || target.type==="infected_hunter"){
+    const randomPlayerClass=
+        target.isPlayer && mode==="random"
+            ? (rng.chance(.5) ? "cleric" : "hunter")
+            : null;
+    if(randomPlayerClass==="hunter" || (!randomPlayerClass && (original==="hunter" || target.type==="infected_hunter"))){
         target.type="hunter";
         target.team="human";
         target.infected=false;
         target.originalType="hunter";
-    }else if(original==="cleric"){
+    }else if(randomPlayerClass==="cleric" || (!randomPlayerClass && original==="cleric")){
         target.type="cleric";
         target.team="human";
         target.infected=false;
@@ -3074,8 +3099,10 @@ function updatePopulation(){
         );
         return;
     }
+    const playerIsVampire=
+        player.team==="vampire";
     if(
-        mode==="vampire" &&
+        (mode==="vampire" || mode==="random" && playerIsVampire) &&
         humans===0
     ){
         endGame(
@@ -3085,7 +3112,7 @@ function updatePopulation(){
         return;
     }
     if(
-        mode==="hunter" &&
+        (mode==="hunter" || mode==="random" && !playerIsVampire) &&
         vampires===0
     ){
         endGame(
@@ -3171,6 +3198,11 @@ function returnToMenu(){
     document
         .getElementById(
             "btn-hunter"
+        )
+        .style.display="block";
+    document
+        .getElementById(
+            "btn-chaos"
         )
         .style.display="block";
     playerClass=null;
@@ -3549,10 +3581,6 @@ function loop(timestamp){
         ){
             const p=
                 particles[i];
-            p.x+=
-                p.vx*dt;
-            p.y+=
-                p.vy*dt;
             p.life-=dt;
             if(
                 p.life<=0
@@ -3644,14 +3672,18 @@ function startGame(){
             "mode-badge"
         )
         .textContent=
-            mode==="vampire"
+            mode==="vampire" || mode==="random" && player.team==="vampire"
             ? (
                 playerClass==="common"
                     ? "🧛 VAMPIRO COMUM"
-                    : "🩸 CAÇADOR INFECTADO"
+                    : player.type==="infected_hunter"
+                        ? "🩸 CAÇADOR INFECTADO"
+                        : player.type==="cleric"
+                            ? "✝️ CLÉRIGO"
+                            : "🔫 CAÇADOR"
               )
             : (
-                playerClass==="cleric"
+                player.type==="cleric"
                     ? "✝️ CLÉRIGO"
                     : "🔫 CAÇADOR"
               );
@@ -3706,6 +3738,11 @@ document
                 "btn-hunter"
             )
             .style.display="none";
+        document
+            .getElementById(
+                "btn-chaos"
+            )
+            .style.display="none";
     };
 document
     .getElementById(
@@ -3728,6 +3765,20 @@ document
                 "btn-hunter"
             )
             .style.display="none";
+        document
+            .getElementById(
+                "btn-chaos"
+            )
+            .style.display="none";
+    };
+document
+    .getElementById(
+        "btn-chaos"
+    )
+    .onclick=()=>{
+        mode="random";
+        playerClass=null;
+        startGame();
     };
 document
     .querySelectorAll(
