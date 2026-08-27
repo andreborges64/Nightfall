@@ -700,7 +700,7 @@ button,input{
             <h3>Habilidades</h3>
             <ul>
                 <li><strong>Vampiro comum:</strong> botão esquerdo teleporta; botão direito infecta por toque.</li>
-                <li><strong>Caçador:</strong> botão esquerdo dispara contra vampiros.</li>
+                <li><strong>Caçador:</strong> botão esquerdo dispara contra vampiros; botão direito ativa uma bomba de área em volta de si, matando vampiros próximos.</li>
                 <li><strong>Clérigo:</strong> botão esquerdo purifica à média distância; botão direito purifica por toque.</li>
                 <li><strong>Caçador infectado:</strong> botão esquerdo atira; botão direito infecta por toque.</li>
             </ul>
@@ -743,6 +743,8 @@ const FOV = Math.PI * .75;
 const CURE_RANGE = 200;
 const TOUCH_CURE_RANGE = 30;
 const CURE_COOLDOWN = 1.0;
+const HUNTER_BOMB_RADIUS = 120;
+const HUNTER_BOMB_COOLDOWN = 1.25;
 /* ---------------------------------------------------------
    CANVAS
 --------------------------------------------------------- */
@@ -1637,17 +1639,7 @@ function cureVampire(cleric, target, useCooldown=true){
     target.path=[];
     target.target=null;
     updateVisual(target);
-    for(let i=0;i<16;i++){
-        particles.push({
-            x:target.x,
-            y:target.y,
-            z:target.z,
-            vx:(rng.next()-.5)*140,
-            vy:(rng.next()-.5)*140,
-            life:.35+rng.next()*.4,
-            color:rng.chance(.5)?"#f5f0d8":"#d4af37"
-        });
-    }
+    spawnPurifyFX(target.x,target.y,target.z);
     if(target.isPlayer && mode==="vampire"){
         target.isPlayer=false;
         endGame(
@@ -1719,6 +1711,26 @@ function fireBullet(owner){
             color:"#ffd85c"
         });
     }
+}
+function hunterAreaBomb(owner, radius=HUNTER_BOMB_RADIUS){
+    if(!owner || !owner.alive) return false;
+    if(owner.type!=="hunter" && owner.type!=="infected_hunter") return false;
+    if(owner.fireCooldown>0) return false;
+    owner.fireCooldown=HUNTER_BOMB_COOLDOWN;
+    spawnExplosionFX(owner.x,owner.y,owner.z,radius);
+    let killed=0;
+    for(const e of entities){
+        if(!e.alive) continue;
+        if(e.id===owner.id) continue;
+        if(e.z!==owner.z) continue;
+        if(e.team!=="vampire") continue;
+        const d=Math.hypot(e.x-owner.x,e.y-owner.y);
+        if(d<=radius+e.radius){
+            killEntity(e);
+            killed++;
+        }
+    }
+    return killed>0;
 }
 /* =========================================================
     PROJETEIS
@@ -1845,6 +1857,36 @@ function spawnInfectionFX(x,y,z){
                 rng.chance(.5)
                     ? "#c41e3a"
                     : "#8a2be2"
+        });
+    }
+}
+function spawnPurifyFX(x,y,z){
+    for(let i=0;i<26;i++){
+        const angle=rng.next()*Math.PI*2;
+        const dist=12+rng.next()*28;
+        particles.push({
+            x:x+Math.cos(angle)*dist,
+            y:y+Math.sin(angle)*dist,
+            z,
+            vx:(rng.next()-.5)*150,
+            vy:(rng.next()-.5)*150,
+            life:.4+rng.next()*.45,
+            color:rng.chance(.5)?"#f5f0d8":"#d4af37"
+        });
+    }
+}
+function spawnExplosionFX(x,y,z,radius){
+    for(let i=0;i<28;i++){
+        const angle=rng.next()*Math.PI*2;
+        const dist=rng.next()*radius;
+        particles.push({
+            x:x+Math.cos(angle)*dist,
+            y:y+Math.sin(angle)*dist,
+            z,
+            vx:(Math.cos(angle)*140)+(rng.next()-.5)*60,
+            vy:(Math.sin(angle)*140)+(rng.next()-.5)*60,
+            life:.35+rng.next()*.35,
+            color:rng.chance(.7)?"#ffd85c":"#fff1b8"
         });
     }
 }
@@ -2084,11 +2126,8 @@ function updateClericAI(e,dt){
     if(vamp.entity && vamp.distance<420){
         if(vamp.distance>=90){
             e.closeReactionTimer=0;
-        }else if(e.closeReactionTimer>0){
-            return;
-        }else if(e.cureCooldown<=0){
+        }else if(e.closeReactionTimer<=0 && e.cureCooldown<=0){
             e.closeReactionTimer=CLOSE_REACTION_DELAY;
-            return;
         }
         e.state="cure";
         e.target=vamp.entity;
@@ -2100,7 +2139,11 @@ function updateClericAI(e,dt){
         }else if(vamp.distance<90){
             tryMove(e,-dx,-dy,dt);
         }
-        if(vamp.distance<=CURE_RANGE && canSee(e,vamp.entity)){
+        if(
+            e.closeReactionTimer<=0 &&
+            vamp.distance<=CURE_RANGE &&
+            canSee(e,vamp.entity)
+        ){
             cureVampire(e,vamp.entity);
         }
         return;
@@ -2290,11 +2333,8 @@ function updateHunterAI(e,dt){
     ){
         if(vamp.distance>=130){
             e.closeReactionTimer=0;
-        }else if(e.closeReactionTimer>0){
-            return;
-        }else if(e.fireCooldown<=0){
+        }else if(e.closeReactionTimer<=0 && e.fireCooldown<=0){
             e.closeReactionTimer=CLOSE_REACTION_DELAY;
-            return;
         }
         const target=
             vamp.entity;
@@ -2336,6 +2376,7 @@ function updateHunterAI(e,dt){
          * ATIRA SE TIVER VISÃO
          */
         if(
+            e.closeReactionTimer<=0 &&
             canSee(e,target) &&
             vamp.distance<430
         ){
@@ -2542,6 +2583,11 @@ function updatePlayer(dt){
         mobileRight
     ){
         if(
+            player.type==="hunter"
+        ){
+            hunterAreaBomb(player);
+        }
+        else if(
             player.team==="vampire"
         ){
             playerInfect();
